@@ -84,6 +84,6 @@ def main():
         f"Total: {len(base)} linhas | {base['nome_acao'].nunique()} ativos"
     )  # Imprime a quantidade de linhas e a quantidade de ativos
 
-
+# Executa o main() apenas quando o arquivo é rodado diretamente
 if __name__ == "__main__":
     main()
