@@ -51,6 +51,34 @@ def recalcular_periodo(df):
 df, origem = carregar_dados()
 
 
+@st.cache_data(show_spinner=False)
+def calcular_resumo(df):
+    """Uma linha por ação: retorno volatilidade, drawdown máximo, volume e Sharpe empírico"""
+    resumo = df.groupby("nome_acao").agg(
+        setor=("setor", "first"),
+        retorno_acumulado=("retorno_acumulado", "last"),
+        volatilidade_anual=("retorno_diario", "std"),
+        drawdown_maximo=("drawdown", "min"),
+        volume_financeiro_medio=("volume_financeiro", "mean"),
+    )
+    resumo["volatilidade_anual"] = resumo["volatilidade_anual"] * 252**0.5
+    resumo["sharpe_empirico"] = (
+        resumo["retorno_acumulado"] / resumo["volatilidade_anual"]
+    )
+    return resumo.reset_index()
+
+
+def pct(valor):
+    """0.0213 -> 2,13%"""
+    return f"{valor:.2%}".replace(".", ",")
+
+
+def pontos_percentuais(valor):
+    """0.0321 -> '+3,21 p.p.'"""
+    numero = f"{valor * 100:+.2f}".replace(".", ",")
+    return f"{numero} p.p."
+
+
 # ------------------------------------------------------------------------------
 # Filtros: valores padrão guardados no session_state
 # ------------------------------------------------------------------------------
@@ -131,6 +159,11 @@ if df_filtrado.empty:
 
 df_filtrado = recalcular_periodo(df_filtrado)
 
+# Resumo das ações filtradas e de todas as 12 no mesmo período (base de comparação dos deltas)
+resumo = calcular_resumo(df_filtrado)
+df_periodo = recalcular_periodo(df[df["data"].between(inicio, fim)])
+resumo_geral = calcular_resumo(df_periodo)
+
 # ------------------------------------------------------------------
 # Conteúdo
 # ------------------------------------------------------------------
@@ -140,5 +173,41 @@ st.caption(
     f"{inicio:%d/%m/%Y} a {fim:%d/%m/%Y}".replace(",", ".")
 )
 
-# Mostra os primeiros registros do DataFrame
+# KPIs
+
+retorno_medio = resumo["retorno_acumulado"].mean()
+vol_media = resumo["volatilidade_anual"].mean()
+melhor = resumo.loc[resumo["retorno_acumulado"].idxmax()]
+pior = resumo.loc[resumo["retorno_acumulado"].idxmin()]
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric(
+    "Retorno médio",
+    pct(retorno_medio),
+    pontos_percentuais(retorno_medio - resumo_geral["retorno_acumulado"].mean()),
+    help="Média do retorno acumulado das ações filtradas. Delta: diferença para a média das 12 ações no mesmo tempo.",
+)
+col2.metric(
+    "Ativo destaque",
+    melhor["nome_acao"],
+    pct(melhor['retorno_acumulado']),
+    help="Ação com maior retorno acumulado no período e filtro selecionados.",
+)
+
+col3.metric(
+    "Menor performance",
+    pior["nome_acao"],
+    pct(pior["retorno_acumulado"]),
+    help="Ação com menor retorno acumulado no período e filtro selecionados.",
+)
+
+col4.metric(
+    "Volatilidade média", pct(vol_media),
+    pontos_percentuais(vol_media - resumo_geral['volatilidade_anual'].mean()),
+    delta_color="inverse",
+    help='Média da volatilidade anualizada (desvio padrão diário × √252). Delta: diferença para a média das 12 ações; vermelho indica mais risco.'
+)
+
+st.divider()
 st.dataframe(df_filtrado.head(20))
