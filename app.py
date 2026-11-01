@@ -395,4 +395,10 @@ with aba3:
 
 # ------- Aba 4: Dados -------
 with aba4:
-    st.dataframe(df_filtrado)
+    st.download_button(
+        "⬇️ Baixar dados filtrados (CSV)",
+        data=df_filtrado.to_csv(index=False, sep=";", decimal=",").encode("utf-8-sig"),
+        file_name="cotacoes_filtradas.csv",
+        mime="text/csv",
+    )
+    st.dataframe(df_filtrado, hide_index=True)
