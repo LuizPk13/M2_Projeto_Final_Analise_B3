@@ -6,6 +6,7 @@ Data App - Análise de Performance de Ações da B3 (2021-2023)
 from pathlib import Path
 import pandas as pd
 import streamlit as st
+import plotly.express as px
 
 # Configurações da página
 st.set_page_config(page_title="Análise B3 2021-2023", page_icon="📈", layout="wide")
@@ -191,7 +192,7 @@ col1.metric(
 col2.metric(
     "Ativo destaque",
     melhor["nome_acao"],
-    pct(melhor['retorno_acumulado']),
+    pct(melhor["retorno_acumulado"]),
     help="Ação com maior retorno acumulado no período e filtro selecionados.",
 )
 
@@ -203,11 +204,192 @@ col3.metric(
 )
 
 col4.metric(
-    "Volatilidade média", pct(vol_media),
-    pontos_percentuais(vol_media - resumo_geral['volatilidade_anual'].mean()),
+    "Volatilidade média",
+    pct(vol_media),
+    pontos_percentuais(vol_media - resumo_geral["volatilidade_anual"].mean()),
     delta_color="inverse",
-    help='Média da volatilidade anualizada (desvio padrão diário × √252). Delta: diferença para a média das 12 ações; vermelho indica mais risco.'
+    help="Média da volatilidade anualizada (desvio padrão diário × √252). Delta: diferença para a média das 12 ações; vermelho indica mais risco.",
 )
 
-st.divider()
-st.dataframe(df_filtrado.head(20))
+
+# ----------------------------------------------------------------------------------
+# Gráficos
+# ----------------------------------------------------------------------------------
+# Cor fixa por ação: a cor acompanha a ação mesmo quando os filtros mudam
+paleta = px.colors.qualitative.Plotly + px.colors.qualitative.Safe
+mapa_cores = dict(zip(sorted(df["nome_acao"].unique()), paleta))
+
+
+def estilo(fig):
+    """Padrão visual: Número no formato brasileiro e legenda sem título"""
+    fig.update_layout(separators=",.", legend_title_text="", margin=dict(t=40, b=20))
+    return fig
+
+
+aba1, aba2, aba3, aba4 = st.tabs(
+    ["📈 Rentabilidade", "⚖️ Risco e Retorno", "🔍 Análise por ação", "📋 Dados"]
+)
+
+
+# ------------------------ Aba 1: Base 100 (pergunta 1) ------------------------
+with aba1:
+    st.subheader("Evolução de R$ 100 investidos no início do período (Base 100)")
+    fig = px.line(
+        df_filtrado,
+        x="data",
+        y="base_100",
+        color="nome_acao",
+        color_discrete_map=mapa_cores,
+        labels={"data": "", "base_100": "Base 100", "nome_acao": "Ação"},
+    )
+    fig.add_hline(
+        y=100, line_dash="dash", line_color="gray", annotation_text="Valor inicial"
+    )
+    fig.update_traces(hovertemplate="%{y:.1f}")
+    fig.update_layout(hovermode="x unified")
+    st.plotly_chart(estilo(fig))
+
+
+# ------- Aba 2: Risco x Retorno (pergunta 2) e Drawdown máximo (pergunta 4) -------
+with aba2:
+    st.subheader("Risco × Retorno")
+    fig = px.scatter(
+        resumo,
+        x="volatilidade_anual",
+        y="retorno_acumulado",
+        size="volume_financeiro_medio",
+        color="nome_acao",
+        text="nome_acao",
+        color_discrete_map=mapa_cores,
+        hover_data={
+            "setor": True,
+            "sharpe_empirico": ":.2f",
+            "volume_financeiro_medio": False,
+            "nome_acao": False,
+        },
+        labels={
+            "volatilidade_anual": "Volatilidade anualizada",
+            "retorno_acumulado": "Retorno acumulado",
+            "setor": "Setor",
+            "sharpe_empirico": "Sharpe empírico",
+        },
+    )
+    fig.add_hline(y=0, line_dash="dash", line_color="gray")
+    fig.update_traces(textposition="top center")
+    fig.update_layout(
+        showlegend=False,
+        xaxis_tickformat=".0%",
+        yaxis_tickformat=".0%",
+        xaxis_hoverformat=".2%",
+        yaxis_hoverformat=".2%",
+    )
+    st.plotly_chart(estilo(fig))
+    st.caption(
+        "Mais para cima e para a esquerda = melhor relação retorno × risco. "
+        "Tamanho da bolha = volume financeiro médio diário."
+    )
+
+    st.subheader("Maior queda a partir do topo (drawdown máximo)")
+    fig = px.bar(
+        resumo.sort_values("drawdown_maximo"),
+        x="drawdown_maximo",
+        y="nome_acao",
+        orientation="h",
+        color="nome_acao",
+        color_discrete_map=mapa_cores,
+        text="drawdown_maximo",
+        labels={"drawdown_maximo": "Drawdown máximo", "nome_acao": ""},
+    )
+    fig.update_traces(
+        texttemplate="%{x:.1%}", hovertemplate="%{y}: %{x:.2%}<extra></extra>"
+    )
+    fig.update_layout(showlegend=False, xaxis_tickformat=".0%")
+    st.plotly_chart(estilo(fig))
+    st.caption(
+        "Barra mais curta = ação mais resiliente (menor queda a partir de um pico)."
+    )
+
+
+# ------------------- Aba 3: Análise individual (perguntas 3, 4 e 5) -------------------
+with aba3:
+    acoes = sorted(resumo["nome_acao"])
+    acao = st.selectbox("Escolha a ação", acoes, index=acoes.index(melhor["nome_acao"]))
+    df_acao = df_filtrado[df_filtrado["nome_acao"] == acao]
+    cor = mapa_cores[acao]
+
+    # Preço x médias móveis
+    st.subheader(f"{acao}: preço × médias móveis")
+    fig = px.line(
+        df_acao,
+        x="data",
+        y=["fechamento_ajustado", "sma_21", "sma_50"],
+        color_discrete_sequence=[cor, "#FB8C00", "#8E24AA"],
+        labels={"data": "", "value": "Preço ajustado (R$)"},
+    )
+    nomes = {
+        "fechamento_ajustado": "Preço ajustado",
+        "sma_21": "SMA 21",
+        "sma_50": "SMA 50",
+    }
+    fig.for_each_trace(lambda t: t.update(name=nomes[t.name]))
+    fig.update_traces(hovertemplate="R$ %{y:.2f}")
+    fig.update_layout(hovermode="x unified")
+    st.plotly_chart(estilo(fig))
+    st.caption(
+        "Preço acima das médias costuma ser lido como tendência de alta; abaixo, de baixa. "
+        "Cruzamentos entre SMA 21 e SMA 50 sinalizam possíveis mudanças de tendência."
+    )
+
+    # Drawdown ao longo do tempo
+    st.subheader(f"{acao}: queda a partir do topo ao longo do tempo")
+    fig = px.area(
+        df_acao,
+        x="data",
+        y="drawdown",
+        color_discrete_sequence=[cor],
+        labels={"data": "", "drawdown": "Drawdown"},
+    )
+    fig.update_traces(hovertemplate="%{y:.2%}")
+    fig.update_layout(yaxis_tickformat=".0%", hovermode="x unified")
+    st.plotly_chart(estilo(fig))
+
+    # Distribuição dos retornos diários
+    st.subheader(f"{acao}: distribuição dos retornos diários")
+    fig = px.histogram(
+        df_acao.dropna(subset=["retorno_diario"]),
+        x="retorno_diario",
+        nbins=60,
+        marginal="box",
+        color_discrete_sequence=[cor],
+        labels={"retorno_diario": "Retorno diário"},
+    )
+    fig.update_xaxes(tickformat=".1%", hoverformat=".2%")
+    fig.update_layout(yaxis_title="Nº de dias", bargap=0.05)
+    st.plotly_chart(estilo(fig))
+
+    # Estatísticas de todas as ações filtradas (pergunta 3)
+    st.subheader("Estatísticas dos retornos diários (ações filtradas)")
+    estat = df_filtrado.groupby("nome_acao")["retorno_diario"].agg(
+        ["mean", "std", "skew", pd.Series.kurt, "min", "max"]
+    )
+    estat.columns = [
+        "Média",
+        "Desvio padrão",
+        "Assimetria",
+        "Curtose",
+        "Pior dia",
+        "Melhor dia",
+    ]
+    numero = lambda x: f"{x:.2f}".replace(".", ",")
+    formato = {c: pct for c in ["Média", "Desvio padrão", "Pior dia", "Melhor dia"]}
+    formato.update({"Assimetria": numero, "Curtose": numero})
+    st.dataframe(estat.style.format(formato))
+    st.caption(
+        "Assimetria negativa: a cauda de quedas é mais longa que a de altas. "
+        "Curtose acima de 0: mais dias extremos do que numa distribuição normal."
+    )
+
+
+# ------- Aba 4: Dados -------
+with aba4:
+    st.dataframe(df_filtrado)
