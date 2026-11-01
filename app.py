@@ -247,6 +247,7 @@ with aba1:
     )
     fig.update_traces(hovertemplate="%{y:.1f}")
     fig.update_layout(hovermode="x unified")
+    fig.update_xaxes(tickformat="%m/%Y", hoverformat="%d/%m/%Y")
     st.plotly_chart(estilo(fig))
 
 
@@ -334,6 +335,7 @@ with aba3:
     fig.for_each_trace(lambda t: t.update(name=nomes[t.name]))
     fig.update_traces(hovertemplate="R$ %{y:.2f}")
     fig.update_layout(hovermode="x unified")
+    fig.update_xaxes(tickformat="%m/%Y", hoverformat="%d/%m/%Y")
     st.plotly_chart(estilo(fig))
     st.caption(
         "Preço acima das médias costuma ser lido como tendência de alta; abaixo, de baixa. "
@@ -351,6 +353,7 @@ with aba3:
     )
     fig.update_traces(hovertemplate="%{y:.2%}")
     fig.update_layout(yaxis_tickformat=".0%", hovermode="x unified")
+    fig.update_xaxes(tickformat="%m/%Y", hoverformat="%d/%m/%Y")
     st.plotly_chart(estilo(fig))
 
     # Distribuição dos retornos diários
