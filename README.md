@@ -290,8 +290,7 @@ Usei GitFlow para versionamento: branch `main` para código estável, `develop` 
 
 ## 13. Autoria e Referências
 
-**Luiz Fernando de Jesus Silva Homem** · [GitHub](https://github.com/LuizPk13)
-Projeto Final — Módulo 2: Visualização de Dados e BI — SESISENAI/SC · LAB365 · Prof. Savio Ricardo Garcia
+**Luiz Fernando de Jesus Silva Homem** · [Meu GitHub](https://github.com/LuizPk13) · Projeto Final — Módulo 2: Visualização de Dados e BI — SESISENAI/SC · LAB365 · Prof. Savio Ricardo Garcia
 
 - [pandas](https://pandas.pydata.org/docs/) · [yfinance](https://github.com/ranaroussi/yfinance) · [Streamlit](https://docs.streamlit.io/) · [Plotly](https://plotly.com/python/plotly-express/) · [Supabase](https://supabase.com/docs)
 - [Mudança de ticker da Embraer para EMBJ3 — Análise de Ações](https://www.analisedeacoes.com/noticias/embraer-embr3-mudara-de-ticker-na-b3-e-na-nyse-a-partir-de-3-de-novembro/)
