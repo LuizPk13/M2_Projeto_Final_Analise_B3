@@ -280,7 +280,7 @@ M2_Projeto_Final_Analise_B3/
 
 - 📋 **Trello:** [Quadro do Projeto — Análise B3](https://trello.com/b/nUl2gxb3/projeto-analise-b3)
 - 🚀 **App:** [Aplicativo Streamlit](https://projeto-luiz-fernando-jesus-b3-m2.streamlit.app/)
-- 🎥 **Vídeo:** [Link do video](...)
+- 🎥 **Vídeo:** [Link do video](https://drive.google.com/file/d/1UvxAFYQLe3ggXYv6LBPVRgbs4G4fF4W5/view?usp=sharing)
 
 ![Quadro do Projeto no Trello](assets/Trello.png)
 
